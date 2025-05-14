@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Supply Tracker Tool</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f9f9f9; }
+    table, th, td { border: 1px solid #aaa; border-collapse: collapse; padding: 8px; }
+    th { background-color: #eee; }
+    input[type="number"] { width: 80px; }
+    input[type="text"] { width: 120px; }
+    .results { margin-top: 20px; font-weight: bold; }
+    .trip { margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  <h2>Supply Tracker Tool</h2>
+  <table id="supplyTable">
+    <thead>
+      <tr>
+        <th>Ingredient</th>
+        <th>Feeder</th>
+        <th>Reserve</th>
+        <th>Mixer</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td><input type="text" value="Ingredient1"></td><td><input type="number" value="0"></td><td><input type="number" value="0"></td><td><input type="number" value="0"></td></tr>
+      <tr><td><input type="text" value="Ingredient2"></td><td><input type="number" value="0"></td><td><input type="number" value="0"></td><td><input type="number" value="0"></td></tr>
+      <tr><td><input type="text" value="Ingredient3"></td><td><input type="number" value="0"></td><td><input type="number" value="0"></td><td><input type="number" value="0"></td></tr>
+      <tr><td><input type="text" value="Ingredient4"></td><td><input type="number" value="0"></td><td><input type="number" value="0"></td><td><input type="number" value="0"></td></tr>
+      <tr><td><input type="text" value="Ingredient5"></td><td><input type="number" value="0"></td><td><input type="number" value="0"></td><td><input type="number" value="0"></td></tr>
+      <tr><td><input type="text" value="Ingredient6"></td><td><input type="number" value="0"></td><td><input type="number" value="0"></td><td><input type="number" value="0"></td></tr>
+      <tr><td><input type="text" value="Ingredient7"></td><td><input type="number" value="0"></td><td><input type="number" value="0"></td><td><input type="number" value="0"></td></tr>
+      <tr><td><input type="text" value="Ingredient8"></td><td><input type="number" value="0"></td><td><input type="number" value="0"></td><td><input type="number" value="0"></td></tr>
+    </tbody>
+  </table>
+  <button onclick="calculate()">Calculate</button>
+
+  <div class="results" id="results"></div>
+
+  <script>
+    const FEEDER_MAX = 160;
+    const RESERVE_MAX = 160;
+    const MIXER_MAX = 20;
+    const SLOT_CAPACITY = 20;
+    const TOTAL_SLOTS = 8 + 16;
+    const TOTAL_UNIT_CAPACITY = SLOT_CAPACITY * TOTAL_SLOTS;
+
+    function calculate() {
+      let table = document.getElementById("supplyTable").getElementsByTagName("tbody")[0];
+      let rows = table.getElementsByTagName("tr");
+      let ingredients = [];
+      let totalUnits = 0;
+      let totalSlots = 0;
+      let resultHtml = '<h3>Results:</h3><ul>';
+
+      for (let row of rows) {
+        let cells = row.getElementsByTagName("td");
+        let name = cells[0].getElementsByTagName("input")[0].value;
+        let feeder = parseInt(cells[1].getElementsByTagName("input")[0].value) || 0;
+        let reserve = parseInt(cells[2].getElementsByTagName("input")[0].value) || 0;
+        let mixer = parseInt(cells[3].getElementsByTagName("input")[0].value) || 0;
+
+        let neededFeeder = Math.max(0, FEEDER_MAX - feeder);
+        let neededReserve = Math.max(0, RESERVE_MAX - reserve);
+        let neededMixer = Math.max(0, MIXER_MAX - mixer);
+
+        let totalNeeded = neededFeeder + neededReserve + neededMixer;
+        let maxTotal = FEEDER_MAX + RESERVE_MAX + MIXER_MAX;
+        totalNeeded = Math.min(totalNeeded, maxTotal);
+
+        if (totalNeeded > 0) {
+          ingredients.push({ name, totalNeeded });
+          totalUnits += totalNeeded;
+          totalSlots += Math.ceil(totalNeeded / SLOT_CAPACITY);
+        }
+
+        resultHtml += `<li>${name}: ${totalNeeded} units needed</li>`;
+      }
+
+      let trips = [];
+      ingredients.sort((a, b) => b.totalNeeded - a.totalNeeded);
+
+      while (ingredients.length > 0) {
+        let trip = [];
+        let capacity = TOTAL_UNIT_CAPACITY;
+        for (let i = 0; i < ingredients.length; ) {
+          let ing = ingredients[i];
+          let allowed = Math.min(capacity, ing.totalNeeded);
+          if (allowed > 0) {
+            trip.push({ name: ing.name, qty: allowed });
+            ing.totalNeeded -= allowed;
+            capacity -= allowed;
+            if (ing.totalNeeded <= 0) {
+              ingredients.splice(i, 1);
+            } else {
+              i++;
+            }
+          } else {
+            i++;
+          }
+        }
+        trips.push(trip);
+      }
+
+      resultHtml += `</ul><p>Total Units: ${totalUnits}</p><p>Total Slots Needed: ${totalSlots}</p><p>Total Trips Needed: ${trips.length}</p>`;
+      resultHtml += `<h3>Trip Breakdown:</h3>`;
+      trips.forEach((trip, i) => {
+        resultHtml += `<div class="trip"><strong>Trip ${i + 1}:</strong><ul>`;
+        trip.forEach(item => {
+          resultHtml += `<li>${item.name}: ${item.qty} units</li>`;
+        });
+        resultHtml += `</ul></div>`;
+      });
+
+      document.getElementById("results").innerHTML = resultHtml;
+    }
+  </script>
+</body>
+</html>
